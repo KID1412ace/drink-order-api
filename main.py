@@ -148,8 +148,9 @@ def complete_order(order_id: int):
 # 5. LINE Bot 接收通道 (資安升級版)
 # ==========================================
 # 從環境變數安全讀取金鑰 (GitHub 上看不到真實密碼)
-LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+# 修改後 (加上 .strip())：
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN").strip() if os.getenv("LINE_CHANNEL_ACCESS_TOKEN") else None
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET").strip() if os.getenv("LINE_CHANNEL_SECRET") else None
 
 # 確保金鑰有讀取到才會啟動 LINE Bot 功能
 if LINE_CHANNEL_ACCESS_TOKEN and LINE_CHANNEL_SECRET:
