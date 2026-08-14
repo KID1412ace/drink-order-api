@@ -1,13 +1,22 @@
-from fastapi import FastAPI
+import os
+from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel
 from typing import List
 import uvicorn
 import sqlite3
 from fastapi.middleware.cors import CORSMiddleware 
-from fastapi.responses import FileResponse  # 🌟 新增這行
+from fastapi.responses import FileResponse
+
+# LINE Bot 必備的套件
+from linebot import LineBotApi, WebhookHandler
+from linebot.exceptions import InvalidSignatureError
+from linebot.models import MessageEvent, TextMessage, TextSendMessage
 
 app = FastAPI()
 
+# ==========================================
+# 1. 系統設定與資料庫初始化
+# ==========================================
 # 設定 CORS 允許所有來源連線
 app.add_middleware(
     CORSMiddleware,
@@ -43,6 +52,9 @@ def init_db():
 
 init_db()
 
+# ==========================================
+# 2. 定義資料格式 (Pydantic Models)
+# ==========================================
 class OrderItem(BaseModel):
     product_id: int
     product_name: str
@@ -57,19 +69,24 @@ class Order(BaseModel):
     total_price: int
     items: List[OrderItem]
 
+# ==========================================
+# 3. 網頁伺服器路由 (提供 HTML 給瀏覽器)
+# ==========================================
 @app.get("/")
 def read_root():
     return {"message": "飲料點單系統 API 已經成功啟動！"}
-# 🌟 新增：讓客人連線到 /client 時，伺服器回傳 index.html
+
 @app.get("/client")
 def get_client_page():
-    return FileResponse("index11.html")
+    return FileResponse("index.html")
 
-# 🌟 新增：讓老闆連線到 /admin 時，伺服器回傳 admin.html
 @app.get("/admin")
 def get_admin_page():
     return FileResponse("admin.html")
 
+# ==========================================
+# 4. 點單系統 API (新增、查詢、刪除)
+# ==========================================
 @app.post("/api/orders")
 async def create_order(order: Order):
     conn = sqlite3.connect("drinks.db")
@@ -113,9 +130,6 @@ def get_all_orders():
     conn.close()
     return {"status": "success", "total_orders": len(result), "data": result}
 
-# ==========================================
-# 🌟 刪除訂單的 API 必須放在這裡 (uvicorn.run 的上方)！
-# ==========================================
 @app.delete("/api/orders/{order_id}")
 def complete_order(order_id: int):
     conn = sqlite3.connect("drinks.db")
@@ -130,6 +144,47 @@ def complete_order(order_id: int):
     print(f"✅ 訂單 #{order_id} 已經製作完成並結案！")
     return {"status": "success", "message": f"訂單 #{order_id} 已結案"}
 
-# 這行一定要在整個檔案的最下面
+# ==========================================
+# 5. LINE Bot 接收通道 (資安升級版)
+# ==========================================
+# 從環境變數安全讀取金鑰 (GitHub 上看不到真實密碼)
+LINE_CHANNEL_ACCESS_TOKEN = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+LINE_CHANNEL_SECRET = os.getenv("LINE_CHANNEL_SECRET")
+
+# 確保金鑰有讀取到才會啟動 LINE Bot 功能
+if LINE_CHANNEL_ACCESS_TOKEN and LINE_CHANNEL_SECRET:
+    line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
+    handler = WebhookHandler(LINE_CHANNEL_SECRET)
+
+    @app.post("/callback")
+    async def callback(request: Request):
+        signature = request.headers.get("X-Line-Signature", "")
+        body = await request.body()
+        body_str = body.decode("utf-8")
+        
+        try:
+            handler.handle(body_str, signature)
+        except InvalidSignatureError:
+            raise HTTPException(status_code=400, detail="無效的簽章")
+        return "OK"
+
+    @handler.add(MessageEvent, message=TextMessage)
+    def handle_message(event):
+        user_msg = event.message.text
+        
+        # ⚠️ 請把下面這個網址，替換成你自己的 Render 網址！
+        my_render_url = "https://drink-order-api.onrender.com"
+        
+        reply_text = f"歡迎光臨！您剛剛說了：「{user_msg}」\n\n若要點飲料，請點擊下方專屬連結前往點餐喔！👇\n{my_render_url}/client"
+        
+        line_bot_api.reply_message(
+            event.reply_token,
+            TextSendMessage(text=reply_text)
+        )
+
+# ==========================================
+# 啟動伺服器 (Render 需要綁定 0.0.0.0)
+# ==========================================
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    # 使用 port 10000 確保在 Render 雲端運作順利
+    uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)
