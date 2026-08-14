@@ -3,99 +3,319 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>店家接單後台</title>
+    <title>專業手搖飲 - 後台接單看板</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: '微軟正黑體', sans-serif; background-color: #2c3e50; color: white; padding: 20px; }
-        h2 { text-align: center; margin-bottom: 20px; }
-        .order-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: center; }
-        .order-card { background: #ecf0f1; color: #333; padding: 15px; border-radius: 8px; width: 280px; box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
-        .order-header { font-size: 18px; font-weight: bold; border-bottom: 2px solid #bdc3c7; padding-bottom: 10px; margin-bottom: 10px; }
-        .item { font-size: 16px; margin-bottom: 2px; font-weight: bold; color: #2980b9; }
-        .item-details { font-size: 14px; color: #7f8c8d; margin-left: 20px; margin-bottom: 10px; }
-        .refresh-btn { display: block; margin: 0 auto 20px; padding: 10px 20px; background: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; font-size: 16px; font-weight: bold; }
-        .refresh-btn:hover { background: #c0392b; }
+        :root {
+            --bg-color: #F1F5F9;
+            --header-bg: #1E293B;
+            --card-bg: #FFFFFF;
+            --text-main: #334155;
+            --accent: #3B82F6;
+            --success: #10B981;
+            --danger: #EF4444;
+            --border: #E2E8F0;
+        }
+
+        * {
+            box-sizing: border-box;
+            font-family: 'Noto Sans TC', sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+        }
+
+        .header {
+            background-color: var(--header-bg);
+            color: white;
+            padding: 1.5rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header h1 {
+            font-size: 1.5rem;
+            letter-spacing: 1px;
+        }
+
+        .refresh-btn {
+            background-color: var(--accent);
+            color: white;
+            border: none;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background-color: #2563EB;
+        }
+
+        .dashboard {
+            padding: 2rem;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .stats-bar {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-box {
+            background: var(--card-bg);
+            padding: 1rem 1.5rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border-left: 4px solid var(--accent);
+            font-weight: 700;
+        }
+
+        /* 訂單網格排版 */
+        .orders-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .order-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.2s;
+        }
+
+        .order-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        }
+
+        .order-header {
+            background-color: #F8FAFC;
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .order-id {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--header-bg);
+        }
+
+        .order-customer {
+            font-size: 0.9rem;
+            color: #64748B;
+            background: #E2E8F0;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+        }
+
+        .order-body {
+            padding: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .item-list {
+            list-style: none;
+        }
+
+        .item-row {
+            padding: 0.75rem 0;
+            border-bottom: 1px dashed var(--border);
+        }
+
+        .item-row:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+        }
+
+        .item-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--header-bg);
+            margin-bottom: 0.25rem;
+        }
+
+        .item-specs {
+            font-size: 0.85rem;
+            color: #64748B;
+        }
+
+        .order-footer {
+            padding: 1.25rem 1.5rem;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: #F8FAFC;
+        }
+
+        .total-price {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--danger);
+        }
+
+        .btn-complete {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 0.5rem 1.25rem;
+            border-radius: 6px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .btn-complete:hover {
+            background-color: #059669;
+        }
+
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 4rem;
+            color: #94A3B8;
+            font-size: 1.25rem;
+            background: var(--card-bg);
+            border-radius: 12px;
+            border: 2px dashed var(--border);
+        }
+
     </style>
 </head>
 <body>
 
-    <h2>👨‍🍳 飲料店後台 - 即時接單看板</h2>
-    <button class="refresh-btn" onclick="fetchOrders()">🔄 重新整理訂單</button>
-    
-    <div class="order-container" id="orders">
-        <!-- 訂單卡片會透過 JavaScript 被塞進這裡 -->
+    <header class="header">
+        <h1>📊 專業手搖飲 - 門市接單系統</h1>
+        <button class="refresh-btn" onclick="fetchOrders()">重新整理 (Refresh)</button>
+    </header>
+
+    <div class="dashboard">
+        <div class="stats-bar">
+            <div class="stat-box">待處理訂單：<span id="orderCount">0</span> 筆</div>
+        </div>
+
+        <div class="orders-grid" id="ordersContainer">
+            <!-- 訂單卡片會透過 JavaScript 渲染到這裡 -->
+            <div class="empty-state">載入中...</div>
+        </div>
     </div>
 
     <script>
-    // 抓取訂單資料 (原本的功能)
-    async function fetchOrders() {
-        try {
-            const response = await fetch("/api/orders");
-            const result = await response.json();
-            
-            const container = document.getElementById("orders");
-            container.innerHTML = ""; 
+        // 初始化載入
+        document.addEventListener('DOMContentLoaded', fetchOrders);
+        // 設定每 10 秒自動刷新一次 (模擬即時系統)
+        setInterval(fetchOrders, 10000);
 
-            if (result.data.length === 0) {
-                container.innerHTML = "<h3>目前沒有任何訂單喔！老闆可以休息一下 ☕</h3>";
+        // 獲取所有訂單
+        async function fetchOrders() {
+            try {
+                const response = await fetch('/api/orders');
+                const result = await response.json();
+                
+                if (result.status === 'success') {
+                    renderOrders(result.data);
+                    document.getElementById('orderCount').textContent = result.total_orders;
+                }
+            } catch (error) {
+                console.error('獲取訂單失敗:', error);
+            }
+        }
+
+        // 渲染訂單卡片到畫面上
+        function renderOrders(orders) {
+            const container = document.getElementById('ordersContainer');
+            container.innerHTML = ''; // 清空現有內容
+
+            if (orders.length === 0) {
+                container.innerHTML = '<div class="empty-state">🎉 目前沒有待處理的訂單，辛苦了！</div>';
                 return;
             }
 
-            result.data.forEach(order => {
-                let itemsHtml = "";
+            orders.forEach(order => {
+                // 組合購物車明細的 HTML
+                let itemsHTML = '';
                 order.items.forEach(item => {
-                    itemsHtml += `
-                        <div class="item">🥤 ${item.product_name} (${item.size})</div>
-                        <div class="item-details">└ ${item.sugar}, ${item.ice}</div>
+                    itemsHTML += `
+                        <li class="item-row">
+                            <div class="item-name">${item.product_name}</div>
+                            <div class="item-specs">
+                                ${item.size} | ${item.sugar} | ${item.ice} 
+                                ${item.toppings !== '無' ? `| +${item.toppings}` : ''}
+                            </div>
+                        </li>
                     `;
                 });
 
-                // 🌟 新增：在卡片最下方加入一個「✅ 完成訂單」的按鈕，並綁定 order.id
-                const cardHtml = `
-                    <div class="order-card">
+                // 建立整張訂單卡片
+                const cardHTML = `
+                    <div class="order-card" id="order-card-${order.id}">
                         <div class="order-header">
-                            訂單 #${order.id} - ${order.user_id} 
-                            <br><small style="color:#e74c3c;">總金額: $${order.total_price}</small>
+                            <span class="order-id">#${order.id}</span>
+                            <span class="order-customer">👤 ${order.user_id}</span>
                         </div>
-                        ${itemsHtml}
-                        <button onclick="finishOrder(${order.id})" style="width: 100%; margin-top: 15px; padding: 10px; background: #27ae60; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">
-                            ✅ 完成並結案
-                        </button>
+                        <div class="order-body">
+                            <ul class="item-list">
+                                ${itemsHTML}
+                            </ul>
+                        </div>
+                        <div class="order-footer">
+                            <div class="total-price">$${order.total_price}</div>
+                            <button class="btn-complete" onclick="completeOrder(${order.id})">✅ 完成結案</button>
+                        </div>
                     </div>
                 `;
-                container.innerHTML += cardHtml;
+                
+                container.innerHTML += cardHTML;
             });
-        } catch (error) {
-            alert("無法取得訂單，請確認後端伺服器是否有啟動！");
-            console.error(error);
-        }
-    }
-
-    // 🌟 新增功能：點擊完成按鈕後，呼叫後端的 DELETE API
-    async function finishOrder(orderId) {
-        if (!confirm(`確定訂單 #${orderId} 已經做完了嗎？`)) {
-            return; // 如果老闆按取消，就什麼都不做
         }
 
-        try {
-            // 使用 DELETE 方法呼叫 API
-            const response = await fetch(`/api/orders/${orderId}`, {
-                method: "DELETE"
-            });
+        // 完成訂單 (呼叫 DELETE API)
+        async function completeOrder(orderId) {
+            if (!confirm(`確定要將訂單 #${orderId} 結案嗎？`)) return;
 
-            if (response.ok) {
-                // 刪除成功後，自動重新抓取一次最新訂單，畫面就會自動更新！
-                fetchOrders(); 
-            } else {
-                alert("結案失敗，請稍後再試。");
+            try {
+                const response = await fetch(`/api/orders/${orderId}`, {
+                    method: 'DELETE'
+                });
+                
+                if (response.ok) {
+                    // 增加淡出動畫效果
+                    const card = document.getElementById(`order-card-${orderId}`);
+                    card.style.opacity = '0';
+                    card.style.transform = 'scale(0.9)';
+                    
+                    // 延遲 300 毫秒後重新拉取最新資料，讓動畫跑完
+                    setTimeout(() => {
+                        fetchOrders();
+                    }, 300);
+                } else {
+                    alert('結案失敗，請稍後再試。');
+                }
+            } catch (error) {
+                console.error('結案操作發生錯誤:', error);
+                alert('系統錯誤，無法結案。');
             }
-        } catch (error) {
-            alert("連線失敗！");
-            console.error(error);
         }
-    }
-
-    // 網頁一打開自動執行
-    fetchOrders();
-</script>
+    </script>
 </body>
 </html>
