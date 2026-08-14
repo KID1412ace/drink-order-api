@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>線上飲料點單</title>
+    <style>
+        body { font-family: '微軟正黑體', sans-serif; background-color: #f4f4f9; padding: 20px; }
+        .container { max-width: 400px; margin: 0 auto; background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }
+        h2 { text-align: center; color: #333; }
+        .form-group { margin-bottom: 15px; }
+        label { display: block; font-weight: bold; margin-bottom: 5px; }
+        select, input { width: 100%; padding: 8px; box-sizing: border-box; border-radius: 5px; border: 1px solid #ccc; }
+        button { width: 100%; padding: 10px; background-color: #28a745; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; margin-top: 10px; }
+        button:hover { background-color: #218838; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>🧋 飲料點單系統</h2>
+    
+    <div class="form-group">
+        <label>顧客名稱：</label>
+        <input type="text" id="userName" placeholder="請輸入您的名字" value="測試顧客A">
+    </div>
+
+    <div class="form-group">
+        <label>選擇飲料：</label>
+        <select id="drink">
+            <option value="1|珍珠奶茶|65">珍珠奶茶 - $65</option>
+            <option value="2|烏龍綠茶|40">烏龍綠茶 - $40</option>
+            <option value="3|多多綠|50">多多綠 - $50</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>容量：</label>
+        <select id="size">
+            <option value="L">大杯</option>
+            <option value="M">中杯</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>甜度：</label>
+        <select id="sugar">
+            <option value="正常糖">正常糖</option>
+            <option value="半糖">半糖</option>
+            <option value="微糖">微糖</option>
+            <option value="無糖">無糖</option>
+        </select>
+    </div>
+
+    <div class="form-group">
+        <label>冰塊：</label>
+        <select id="ice">
+            <option value="正常冰">正常冰</option>
+            <option value="少冰">少冰</option>
+            <option value="微冰">微冰</option>
+            <option value="去冰">去冰</option>
+        </select>
+    </div>
+
+    <button onclick="submitOrder()">送出訂單！</button>
+</div>
+
+<script>
+    async function submitOrder() {
+        // 1. 從網頁上抓取客人填寫的資料
+        const userName = document.getElementById("userName").value;
+        const drinkValue = document.getElementById("drink").value.split("|");
+        const productId = parseInt(drinkValue[0]);
+        const productName = drinkValue[1];
+        const price = parseInt(drinkValue[2]);
+        
+        const size = document.getElementById("size").value;
+        const sugar = document.getElementById("sugar").value;
+        const ice = document.getElementById("ice").value;
+
+        // 2. 將資料組裝成我們 API 規定的 JSON 格式
+        const orderData = {
+            "user_id": userName,
+            "total_price": price, // 簡易版先當作總價就是單杯價
+            "items": [
+                {
+                    "product_id": productId,
+                    "product_name": productName,
+                    "size": size,
+                    "sugar": sugar,
+                    "ice": ice,
+                    "toppings": "",
+                    "subtotal": price
+                }
+            ]
+        };
+
+        // 3. 透過 JavaScript 內建的 fetch，將資料發送給後端 API
+        try {
+            const response = await fetch("/api/orders", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(orderData)
+            });
+
+            const result = await response.json();
+            
+            if(response.ok) {
+                alert(`🎉 點單成功！您的訂單編號是 #${result.order_id}`);
+            } else {
+                alert("點單失敗，請稍後再試。");
+            }
+        } catch (error) {
+            alert("連線到伺服器失敗，請確認 API 伺服器是否有啟動。");
+            console.error(error);
+        }
+    }
+</script>
+
+</body>
+</html>
