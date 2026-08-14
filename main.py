@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, Request, HTTPException
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Optional
 import uvicorn
 from fastapi.middleware.cors import CORSMiddleware 
 from fastapi.responses import FileResponse
@@ -22,43 +22,39 @@ app.add_middleware(
 )
 
 # ==========================================
-# 🛡️ 嚴格資安防禦：Pydantic 資料驗證模型
+# 🛡️ Pydantic 資料驗證模型 (新增 line_uid)
 # ==========================================
 class OrderItem(BaseModel):
-    product_id: int = Field(gt=0, description="商品ID必須大於0")
-    product_name: str = Field(min_length=1, max_length=50, description="商品名稱長度限制")
-    size: str = Field(pattern="^(中杯\\(M\\)|大杯\\(L\\))$", description="防止偽造容量")
+    product_id: int = Field(gt=0)
+    product_name: str = Field(min_length=1, max_length=50)
+    size: str = Field(pattern="^(中杯\\(M\\)|大杯\\(L\\))$")
     sugar: str = Field(min_length=1, max_length=10)
     ice: str = Field(min_length=1, max_length=10)
     toppings: str = Field(max_length=20)
-    subtotal: int = Field(ge=0, description="小計金額不可為負數")
+    subtotal: int = Field(ge=0)
 
 class Order(BaseModel):
-    # 限制姓名長度與格式，初步防禦 XSS 與惡意注入
-    user_id: str = Field(min_length=1, max_length=30, pattern=r"^[\w\s\u4e00-\u9fa5]+$", description="僅允許中英文與數字")
-    total_price: int = Field(ge=0, le=20000, description="限制單筆訂單總額上限")
-    items: List[OrderItem] = Field(min_items=1, max_items=20, description="限制單次最多點20杯，防阻斷服務攻擊")
-
+    user_id: str = Field(min_length=1, max_length=30, pattern=r"^[\w\s\u4e00-\u9fa5]+$")
+    line_uid: Optional[str] = Field(default=None, description="LINE 專屬辨識碼") # 新增這行
+    total_price: int = Field(ge=0, le=20000)
+    items: List[OrderItem] = Field(min_items=1, max_items=20)
 
 # ==========================================
-# ☁️ 雲端資料庫連線設定 (PostgreSQL)
+# ☁️ 雲端資料庫設定
 # ==========================================
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 def get_db_connection():
     if not DATABASE_URL:
         raise Exception("未設定 DATABASE_URL 環境變數")
-    # 連線到 Render 的 PostgreSQL
     return psycopg2.connect(DATABASE_URL)
 
 def init_db():
     if not DATABASE_URL:
-        print("尚未設定 DATABASE_URL，跳過資料庫初始化。")
         return
-        
     conn = get_db_connection()
     cursor = conn.cursor()
-    # 注意：PostgreSQL 的自動遞增主鍵是 SERIAL，不是 SQLite 的 AUTOINCREMENT
+    # 建立基本表單
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS orders (
             id SERIAL PRIMARY KEY,
@@ -66,6 +62,9 @@ def init_db():
             total_price INTEGER NOT NULL
         )
     ''')
+    # 動態擴充欄位 (如果舊版資料庫沒有 line_uid，系統會自動補上)
+    cursor.execute('ALTER TABLE orders ADD COLUMN IF NOT EXISTS line_uid VARCHAR(50);')
+    
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS order_items (
             id SERIAL PRIMARY KEY,
@@ -83,30 +82,36 @@ def init_db():
 
 init_db()
 
+# LINE Bot 初始化
+raw_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
+raw_secret = os.getenv("LINE_CHANNEL_SECRET")
+LINE_CHANNEL_ACCESS_TOKEN = raw_token.strip() if raw_token else None
+LINE_CHANNEL_SECRET = raw_secret.strip() if raw_secret else None
+
+line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN) if LINE_CHANNEL_ACCESS_TOKEN else None
+handler = WebhookHandler(LINE_CHANNEL_SECRET) if LINE_CHANNEL_SECRET else None
+
 # ==========================================
 # 🌐 API 路由邏輯
 # ==========================================
 @app.get("/")
-def read_root():
-    return {"message": "雲端飲料點單系統 API (V2.0 Postgres版) 已經成功啟動！"}
+def read_root(): return {"message": "雲端飲料點單系統 V2.1 (支援 LINE 推播) 啟動！"}
 
 @app.get("/client")
-def get_client_page():
-    return FileResponse("index11.html")
+def get_client_page(): return FileResponse("index11.html")
 
 @app.get("/admin")
-def get_admin_page():
-    return FileResponse("admin.html")
+def get_admin_page(): return FileResponse("admin.html")
 
 @app.post("/api/orders")
 async def create_order(order: Order):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
-        # PostgreSQL 使用 %s 作為參數佔位符 (防禦 SQL Injection)，並透過 RETURNING 取得最新 ID
+        # 將 line_uid 一併寫入資料庫
         cursor.execute(
-            "INSERT INTO orders (user_id, total_price) VALUES (%s, %s) RETURNING id", 
-            (order.user_id, order.total_price)
+            "INSERT INTO orders (user_id, total_price, line_uid) VALUES (%s, %s, %s) RETURNING id", 
+            (order.user_id, order.total_price, order.line_uid)
         )
         new_order_id = cursor.fetchone()[0]
         
@@ -119,7 +124,7 @@ async def create_order(order: Order):
         return {"message": "訂單建立並儲存成功！", "order_id": new_order_id}
     except Exception as e:
         conn.rollback()
-        raise HTTPException(status_code=500, detail=f"資料庫寫入失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"寫入失敗: {str(e)}")
     finally:
         cursor.close()
         conn.close()
@@ -127,20 +132,16 @@ async def create_order(order: Order):
 @app.get("/api/orders")
 def get_all_orders():
     conn = get_db_connection()
-    # 使用 RealDictCursor 讓抓下來的資料直接變成字典 (Dict) 格式
     cursor = conn.cursor(cursor_factory=RealDictCursor)
     try:
         cursor.execute("SELECT * FROM orders ORDER BY id DESC")
         orders = cursor.fetchall()
-        
         result = []
         for order in orders:
             order_dict = dict(order)
             cursor.execute("SELECT * FROM order_items WHERE order_id = %s", (order_dict["id"],))
-            items = cursor.fetchall()
-            order_dict["items"] = [dict(item) for item in items]
+            order_dict["items"] = [dict(item) for cursor_item in cursor.fetchall() for item in [cursor_item]]
             result.append(order_dict)
-            
         return {"status": "success", "total_orders": len(result), "data": result}
     finally:
         cursor.close()
@@ -151,50 +152,54 @@ def complete_order(order_id: int):
     conn = get_db_connection()
     cursor = conn.cursor()
     try:
+        # 結案前，先把該訂單的顧客姓名與 LINE UID 抓出來
+        cursor.execute("SELECT user_id, line_uid FROM orders WHERE id = %s", (order_id,))
+        row = cursor.fetchone()
+        
+        # 執行刪除 (結案)
         cursor.execute("DELETE FROM order_items WHERE order_id = %s", (order_id,))
         cursor.execute("DELETE FROM orders WHERE id = %s", (order_id,))
         conn.commit()
+
+        # 🚀 觸發 O2O LINE 推播通知
+        if row and row[1] and line_bot_api:
+            user_name = row[0]
+            line_uid = row[1]
+            push_text = f"🔔 通知：{user_name} 您好，您的訂單 #{order_id} 已經製作完成囉！請前往櫃檯取餐 🧋"
+            try:
+                line_bot_api.push_message(line_uid, TextSendMessage(text=push_text))
+            except Exception as e:
+                print(f"推播失敗: {e}") # 避免因為推播失敗導致系統崩潰
+
         return {"status": "success", "message": f"訂單 #{order_id} 已結案"}
     finally:
         cursor.close()
         conn.close()
 
 # ==========================================
-# 🤖 LINE Bot 串接設定 (保留自動清理隱藏符號功能)
+# 🤖 LINE Webhook
 # ==========================================
-raw_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
-raw_secret = os.getenv("LINE_CHANNEL_SECRET")
+@app.post("/callback")
+async def callback(request: Request):
+    if not handler: return "OK"
+    signature = request.headers.get("X-Line-Signature", "")
+    body_str = (await request.body()).decode("utf-8")
+    try:
+        handler.handle(body_str, signature)
+    except InvalidSignatureError:
+        raise HTTPException(status_code=400, detail="無效的簽章")
+    return "OK"
 
-LINE_CHANNEL_ACCESS_TOKEN = raw_token.strip() if raw_token else None
-LINE_CHANNEL_SECRET = raw_secret.strip() if raw_secret else None
-
-if LINE_CHANNEL_ACCESS_TOKEN and LINE_CHANNEL_SECRET:
-    line_bot_api = LineBotApi(LINE_CHANNEL_ACCESS_TOKEN)
-    handler = WebhookHandler(LINE_CHANNEL_SECRET)
-
-    @app.post("/callback")
-    async def callback(request: Request):
-        signature = request.headers.get("X-Line-Signature", "")
-        body = await request.body()
-        body_str = body.decode("utf-8")
-        try:
-            handler.handle(body_str, signature)
-        except InvalidSignatureError:
-            raise HTTPException(status_code=400, detail="無效的簽章")
-        return "OK"
-
-    @handler.add(MessageEvent, message=TextMessage)
-    def handle_message(event):
-        user_msg = event.message.text
-        # ⚠️ 記得把下面的網址換成你的 Render 網址！
-        my_render_url = "https://drink-order-api.onrender.com"
-        
-        reply_text = f"歡迎光臨！您剛剛說了：「{user_msg}」\n\n若要點飲料，請點擊下方專屬連結前往點餐喔！👇\n{my_render_url}/client"
-        
-        line_bot_api.reply_message(
-            event.reply_token,
-            TextSendMessage(text=reply_text)
-        )
+@handler.add(MessageEvent, message=TextMessage)
+def handle_message(event):
+    user_msg = event.message.text
+    user_line_id = event.source.user_id # 抓取顧客真正的 LINE ID
+    
+    my_render_url = "https://drink-order-api.onrender.com"
+    # 將 ID 當作參數 (uid) 綁在網址後面
+    reply_text = f"歡迎光臨！若要點飲料，請點擊專屬連結前往點餐喔！👇\n{my_render_url}/client?uid={user_line_id}"
+    
+    line_bot_api.reply_message(event.reply_token, TextSendMessage(text=reply_text))
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=10000, reload=True)

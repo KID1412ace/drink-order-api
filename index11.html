@@ -7,9 +7,9 @@
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #0F172A; /* 曜石黑 */
-            --accent-color: #0D9488;  /* 質感翠綠 */
-            --bg-color: #F8FAFC;      /* 雲朵白 */
+            --primary-color: #0F172A;
+            --accent-color: #0D9488;
+            --bg-color: #F8FAFC;
             --card-bg: #FFFFFF;
             --text-main: #334155;
             --text-light: #94A3B8;
@@ -57,7 +57,6 @@
             }
         }
 
-        /* 左側點單區 */
         .order-section {
             background: var(--card-bg);
             padding: 2rem;
@@ -143,7 +142,6 @@
             cursor: not-allowed;
         }
 
-        /* 右側購物車區 */
         .cart-section {
             background: var(--card-bg);
             padding: 2rem;
@@ -303,6 +301,10 @@
     </div>
 
     <script>
+        // 🚀 取得網址列上的 LINE UID (從 LINE Bot 給的專屬連結中擷取)
+        const urlParams = new URLSearchParams(window.location.search);
+        const userLineUid = urlParams.get('uid');
+
         // 購物車狀態管理 (State Management)
         let cart = [];
 
@@ -314,7 +316,6 @@
                 return;
             }
 
-            // 解析飲品資料 (格式: id|名稱|基本價格)
             const [id, name, basePriceStr] = drinkSelect.split('|');
             let basePrice = parseInt(basePriceStr);
 
@@ -323,15 +324,13 @@
             const ice = document.getElementById('iceSelect').value;
             const topping = document.getElementById('toppingSelect').value;
 
-            // 計算加價邏輯
             let subtotal = basePrice;
             if (size.includes('L')) subtotal += 10;
             if (topping === '珍珠' || topping === '椰果') subtotal += 10;
             if (topping === '布丁') subtotal += 15;
 
-            // 建立單品物件
             const item = {
-                cart_id: Date.now(), // 產生唯一識別碼供刪除使用
+                cart_id: Date.now(), 
                 product_id: parseInt(id),
                 product_name: name,
                 size: size,
@@ -344,7 +343,6 @@
             cart.push(item);
             updateCartUI();
             
-            // 提示動畫或重置表單 (這裡僅作簡單重置)
             document.getElementById('drinkSelect').value = '';
         }
 
@@ -399,16 +397,16 @@
                 return;
             }
 
-            // 防呆：防止重複連點
             const checkoutBtn = document.getElementById('checkoutBtn');
             checkoutBtn.disabled = true;
             checkoutBtn.textContent = '訂單傳送中...';
 
             const totalAmount = parseInt(document.getElementById('totalPrice').textContent);
 
-            // 嚴格對應 Python 後端的 Pydantic Order 模型
+            // 🚀 嚴格對應 Python 後端模型，並加入 line_uid
             const orderPayload = {
                 user_id: userName,
+                line_uid: userLineUid, // 這裡將網址抓到的 ID 綁進訂單
                 total_price: totalAmount,
                 items: cart.map(item => ({
                     product_id: item.product_id,
@@ -422,7 +420,6 @@
             };
 
             try {
-                // 使用相對路徑，系統會自動對應到 Render 的網址
                 const response = await fetch('/api/orders', {
                     method: 'POST',
                     headers: {
@@ -434,16 +431,16 @@
                 if (response.ok) {
                     const result = await response.json();
                     alert(`🎉 訂單送出成功！您的訂單編號為：#${result.order_id}\n請稍候片刻，我們將盡快為您製作！`);
-                    // 清空購物車與表單
                     cart = [];
                     updateCartUI();
                     document.getElementById('userName').value = '';
                     checkoutBtn.textContent = '確認送出訂單';
                 } else {
-                    throw new Error('伺服器回傳錯誤狀態');
+                    const errData = await response.json();
+                    throw new Error(errData.detail || '伺服器回傳錯誤狀態');
                 }
             } catch (error) {
-                alert('❌ 發生錯誤，訂單送出失敗，請檢查網路連線或稍後再試。');
+                alert('❌ 發生錯誤，請確認輸入內容是否符合格式（例如姓名不能有特殊符號），或稍後再試。');
                 console.error('Error:', error);
                 checkoutBtn.disabled = false;
                 checkoutBtn.textContent = '確認送出訂單';
