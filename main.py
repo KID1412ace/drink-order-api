@@ -1,9 +1,10 @@
 import os
+import psycopg2
+from psycopg2.extras import RealDictCursor
 from fastapi import FastAPI, Request, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List
 import uvicorn
-import sqlite3
 from fastapi.middleware.cors import CORSMiddleware 
 from fastapi.responses import FileResponse
 from linebot import LineBotApi, WebhookHandler
@@ -20,53 +21,78 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# ==========================================
+# 🛡️ 嚴格資安防禦：Pydantic 資料驗證模型
+# ==========================================
+class OrderItem(BaseModel):
+    product_id: int = Field(gt=0, description="商品ID必須大於0")
+    product_name: str = Field(min_length=1, max_length=50, description="商品名稱長度限制")
+    size: str = Field(pattern="^(中杯\\(M\\)|大杯\\(L\\))$", description="防止偽造容量")
+    sugar: str = Field(min_length=1, max_length=10)
+    ice: str = Field(min_length=1, max_length=10)
+    toppings: str = Field(max_length=20)
+    subtotal: int = Field(ge=0, description="小計金額不可為負數")
+
+class Order(BaseModel):
+    # 限制姓名長度與格式，初步防禦 XSS 與惡意注入
+    user_id: str = Field(min_length=1, max_length=30, pattern=r"^[\w\s\u4e00-\u9fa5]+$", description="僅允許中英文與數字")
+    total_price: int = Field(ge=0, le=20000, description="限制單筆訂單總額上限")
+    items: List[OrderItem] = Field(min_items=1, max_items=20, description="限制單次最多點20杯，防阻斷服務攻擊")
+
+
+# ==========================================
+# ☁️ 雲端資料庫連線設定 (PostgreSQL)
+# ==========================================
+DATABASE_URL = os.getenv("DATABASE_URL")
+
+def get_db_connection():
+    if not DATABASE_URL:
+        raise Exception("未設定 DATABASE_URL 環境變數")
+    # 連線到 Render 的 PostgreSQL
+    return psycopg2.connect(DATABASE_URL)
+
 def init_db():
-    conn = sqlite3.connect("drinks.db")
+    if not DATABASE_URL:
+        print("尚未設定 DATABASE_URL，跳過資料庫初始化。")
+        return
+        
+    conn = get_db_connection()
     cursor = conn.cursor()
+    # 注意：PostgreSQL 的自動遞增主鍵是 SERIAL，不是 SQLite 的 AUTOINCREMENT
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS orders (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            user_id TEXT,
-            total_price INTEGER
+            id SERIAL PRIMARY KEY,
+            user_id VARCHAR(50) NOT NULL,
+            total_price INTEGER NOT NULL
         )
     ''')
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS order_items (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            order_id INTEGER,
-            product_name TEXT,
-            size TEXT,
-            sugar TEXT,
-            ice TEXT,
-            subtotal INTEGER
+            id SERIAL PRIMARY KEY,
+            order_id INTEGER NOT NULL,
+            product_name VARCHAR(50) NOT NULL,
+            size VARCHAR(20),
+            sugar VARCHAR(20),
+            ice VARCHAR(20),
+            subtotal INTEGER NOT NULL
         )
     ''')
     conn.commit()
+    cursor.close()
     conn.close()
 
 init_db()
 
-class OrderItem(BaseModel):
-    product_id: int
-    product_name: str
-    size: str
-    sugar: str
-    ice: str
-    toppings: str
-    subtotal: int
-
-class Order(BaseModel):
-    user_id: str
-    total_price: int
-    items: List[OrderItem]
-
+# ==========================================
+# 🌐 API 路由邏輯
+# ==========================================
 @app.get("/")
 def read_root():
-    return {"message": "飲料點單系統 API 已經成功啟動！"}
+    return {"message": "雲端飲料點單系統 API (V2.0 Postgres版) 已經成功啟動！"}
 
 @app.get("/client")
 def get_client_page():
-    return FileResponse("index11.html")
+    return FileResponse("index.html")
 
 @app.get("/admin")
 def get_admin_page():
@@ -74,48 +100,67 @@ def get_admin_page():
 
 @app.post("/api/orders")
 async def create_order(order: Order):
-    conn = sqlite3.connect("drinks.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("INSERT INTO orders (user_id, total_price) VALUES (?, ?)", (order.user_id, order.total_price))
-    new_order_id = cursor.lastrowid 
-    for item in order.items:
+    try:
+        # PostgreSQL 使用 %s 作為參數佔位符 (防禦 SQL Injection)，並透過 RETURNING 取得最新 ID
         cursor.execute(
-            "INSERT INTO order_items (order_id, product_name, size, sugar, ice, subtotal) VALUES (?, ?, ?, ?, ?, ?)",
-            (new_order_id, item.product_name, item.size, item.sugar, item.ice, item.subtotal)
+            "INSERT INTO orders (user_id, total_price) VALUES (%s, %s) RETURNING id", 
+            (order.user_id, order.total_price)
         )
-    conn.commit()
-    conn.close()
-    return {"message": "訂單建立並儲存成功！", "order_id": new_order_id}
+        new_order_id = cursor.fetchone()[0]
+        
+        for item in order.items:
+            cursor.execute(
+                "INSERT INTO order_items (order_id, product_name, size, sugar, ice, subtotal) VALUES (%s, %s, %s, %s, %s, %s)",
+                (new_order_id, item.product_name, item.size, item.sugar, item.ice, item.subtotal)
+            )
+        conn.commit()
+        return {"message": "訂單建立並儲存成功！", "order_id": new_order_id}
+    except Exception as e:
+        conn.rollback()
+        raise HTTPException(status_code=500, detail=f"資料庫寫入失敗: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.get("/api/orders")
 def get_all_orders():
-    conn = sqlite3.connect("drinks.db")
-    conn.row_factory = sqlite3.Row 
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM orders")
-    orders = cursor.fetchall()
-    result = []
-    for order in orders:
-        order_dict = dict(order)
-        cursor.execute("SELECT * FROM order_items WHERE order_id = ?", (order_dict["id"],))
-        items = cursor.fetchall()
-        order_dict["items"] = [dict(item) for item in items]
-        result.append(order_dict)
-    conn.close()
-    return {"status": "success", "total_orders": len(result), "data": result}
+    conn = get_db_connection()
+    # 使用 RealDictCursor 讓抓下來的資料直接變成字典 (Dict) 格式
+    cursor = conn.cursor(cursor_factory=RealDictCursor)
+    try:
+        cursor.execute("SELECT * FROM orders ORDER BY id DESC")
+        orders = cursor.fetchall()
+        
+        result = []
+        for order in orders:
+            order_dict = dict(order)
+            cursor.execute("SELECT * FROM order_items WHERE order_id = %s", (order_dict["id"],))
+            items = cursor.fetchall()
+            order_dict["items"] = [dict(item) for item in items]
+            result.append(order_dict)
+            
+        return {"status": "success", "total_orders": len(result), "data": result}
+    finally:
+        cursor.close()
+        conn.close()
 
 @app.delete("/api/orders/{order_id}")
 def complete_order(order_id: int):
-    conn = sqlite3.connect("drinks.db")
+    conn = get_db_connection()
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM orders WHERE id = ?", (order_id,))
-    cursor.execute("DELETE FROM order_items WHERE order_id = ?", (order_id,))
-    conn.commit()
-    conn.close()
-    return {"status": "success", "message": f"訂單 #{order_id} 已結案"}
+    try:
+        cursor.execute("DELETE FROM order_items WHERE order_id = %s", (order_id,))
+        cursor.execute("DELETE FROM orders WHERE id = %s", (order_id,))
+        conn.commit()
+        return {"status": "success", "message": f"訂單 #{order_id} 已結案"}
+    finally:
+        cursor.close()
+        conn.close()
 
 # ==========================================
-# 🌟 加入 .strip() 自動清除隱藏符號的防禦機制
+# 🤖 LINE Bot 串接設定 (保留自動清理隱藏符號功能)
 # ==========================================
 raw_token = os.getenv("LINE_CHANNEL_ACCESS_TOKEN")
 raw_secret = os.getenv("LINE_CHANNEL_SECRET")
