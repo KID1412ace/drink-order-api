@@ -3,410 +3,459 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>專業手搖飲 - 線上點單系統</title>
+    <title>專業手搖飲 - 線上點單</title>
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
     <style>
         :root {
-            --primary-color: #0F172A;
-            --accent-color: #0D9488;
-            --bg-color: #F8FAFC;
-            --card-bg: #FFFFFF;
-            --text-main: #334155;
-            --text-light: #94A3B8;
-            --border-color: #E2E8F0;
+            --brand-green: #659224; /* 迷客夏風格綠 */
+            --brand-light: #F3F7ED;
+            --text-dark: #333333;
+            --text-gray: #666666;
+            --border-color: #E0E0E0;
+            --bg-gray: #F8F9FA;
+            --danger: #D32F2F;
         }
 
-        * {
-            box-sizing: border-box;
-            font-family: 'Noto Sans TC', sans-serif;
-            margin: 0;
-            padding: 0;
-        }
+        * { box-sizing: border-box; font-family: 'Noto Sans TC', sans-serif; margin: 0; padding: 0; }
+        body { background-color: var(--bg-gray); color: var(--text-dark); }
 
-        body {
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            line-height: 1.6;
-        }
-
+        /* ===== 頂部導覽列 ===== */
         .header {
-            background-color: var(--primary-color);
-            color: white;
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-        }
-
-        .header h1 {
-            font-weight: 700;
-            letter-spacing: 2px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 2rem auto;
-            padding: 0 1rem;
-            display: grid;
-            grid-template-columns: 2fr 1fr;
-            gap: 2rem;
-        }
-
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        .order-section {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-        }
-
-        .section-title {
-            font-size: 1.25rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            border-bottom: 2px solid var(--border-color);
-            padding-bottom: 0.5rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.5rem;
-        }
-
-        label {
-            display: block;
-            font-weight: 500;
-            margin-bottom: 0.5rem;
-            color: var(--primary-color);
-        }
-
-        input[type="text"], select {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid var(--border-color);
-            border-radius: 8px;
-            font-size: 1rem;
-            transition: border-color 0.3s;
-        }
-
-        input[type="text"]:focus, select:focus {
-            outline: none;
-            border-color: var(--accent-color);
-            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
-        }
-
-        .options-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
-        }
-
-        .btn {
-            display: inline-block;
-            width: 100%;
-            padding: 1rem;
-            border: none;
-            border-radius: 8px;
-            font-size: 1.1rem;
-            font-weight: 700;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
-
-        .btn-add {
-            background-color: var(--text-main);
-            color: white;
-            margin-top: 1rem;
-        }
-
-        .btn-add:hover {
-            background-color: var(--primary-color);
-        }
-
-        .btn-checkout {
-            background-color: var(--accent-color);
-            color: white;
-            margin-top: 1rem;
-        }
-
-        .btn-checkout:hover {
-            background-color: #0F766E;
-        }
-
-        .btn:disabled {
-            background-color: var(--text-light);
-            cursor: not-allowed;
-        }
-
-        .cart-section {
-            background: var(--card-bg);
-            padding: 2rem;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-            height: fit-content;
-            position: sticky;
-            top: 2rem;
-        }
-
-        .cart-item {
-            border-bottom: 1px dashed var(--border-color);
-            padding: 1rem 0;
+            background: white;
+            padding: 1rem 2rem;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
-
-        .cart-item-details {
-            flex-grow: 1;
-        }
-
-        .cart-item-title {
-            font-weight: 700;
-            color: var(--primary-color);
-        }
-
-        .cart-item-specs {
-            font-size: 0.85rem;
-            color: var(--text-light);
-            margin-top: 0.25rem;
-        }
-
-        .cart-item-price {
-            font-weight: 700;
-            color: var(--accent-color);
-            margin-left: 1rem;
-        }
-
-        .btn-remove {
-            background: none;
+        .brand { font-size: 1.5rem; font-weight: 700; color: var(--brand-green); display: flex; align-items: center; gap: 10px; }
+        .cart-toggle-btn {
+            background: var(--brand-green);
+            color: white;
             border: none;
-            color: #EF4444;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            font-weight: bold;
             cursor: pointer;
-            font-size: 0.9rem;
-            margin-left: 1rem;
+            box-shadow: 0 2px 4px rgba(101, 146, 36, 0.3);
         }
 
-        .cart-total {
-            font-size: 1.5rem;
+        /* ===== 主菜單網格 ===== */
+        .menu-container { max-width: 1200px; margin: 2rem auto; padding: 0 1rem; }
+        .category-group { margin-bottom: 2.5rem; }
+        .category-title {
+            font-size: 1.2rem;
             font-weight: 700;
-            text-align: right;
-            margin-top: 1.5rem;
-            color: var(--primary-color);
+            color: var(--brand-green);
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid var(--brand-light);
+        }
+        .items-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1rem;
+        }
+        .menu-item {
+            background: white;
+            padding: 1rem;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .menu-item:hover { border-color: var(--brand-green); box-shadow: 0 4px 12px rgba(0,0,0,0.05); transform: translateY(-2px); }
+        .item-info h4 { font-size: 1.05rem; margin-bottom: 0.25rem; }
+        .item-price { color: var(--brand-green); font-weight: bold; font-size: 1.1rem; }
+
+        /* ===== 彈出式視窗 (Modal) ===== */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none; justify-content: center; align-items: center;
+            z-index: 100;
+        }
+        .modal {
+            background: white;
+            width: 90%; max-width: 500px;
+            max-height: 90vh;
+            border-radius: 12px;
+            overflow-y: auto;
+            position: relative;
+            display: flex; flex-direction: column;
+        }
+        .modal-header {
+            padding: 1rem; text-align: center; font-size: 1.25rem; font-weight: bold;
+            border-bottom: 1px solid var(--border-color); position: sticky; top: 0; background: white; z-index: 2;
+        }
+        .close-btn { position: absolute; right: 1rem; top: 1rem; font-size: 1.5rem; cursor: pointer; color: var(--text-gray); }
+        
+        .modal-img { width: 100%; height: 200px; background-color: var(--brand-light); display: flex; justify-content: center; align-items: center; font-size: 3rem; color: var(--brand-green); }
+        .modal-notice { background: #FFF8E1; padding: 1rem; font-size: 0.85rem; color: #856404; margin: 1rem; border-radius: 8px; line-height: 1.5; }
+        
+        .modal-body { padding: 0 1.5rem 1rem 1.5rem; }
+        .option-group { margin-bottom: 1.5rem; }
+        .option-title { font-size: 0.95rem; font-weight: 700; margin-bottom: 0.75rem; color: var(--text-gray); }
+        .option-title::before { content: "＊"; color: pink; margin-right: 4px; }
+        
+        .btn-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(80px, 1fr)); gap: 0.5rem; }
+        .opt-btn {
+            border: 1px solid var(--border-color); background: white; padding: 0.6rem 0;
+            border-radius: 6px; cursor: pointer; text-align: center; color: var(--text-dark);
+            transition: all 0.2s; font-size: 0.9rem;
+        }
+        .opt-btn.active { border-color: var(--brand-green); color: var(--brand-green); font-weight: bold; background: var(--brand-light); }
+        
+        select.full-width { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; font-size: 1rem; }
+
+        .modal-footer {
+            padding: 1rem 1.5rem; border-top: 1px solid var(--border-color);
+            background: white; position: sticky; bottom: 0;
+            display: flex; justify-content: space-between; align-items: center; gap: 1rem;
+        }
+        .qty-selector { display: flex; align-items: center; border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden; }
+        .qty-btn { background: white; border: none; padding: 0.5rem 1rem; font-size: 1.2rem; cursor: pointer; color: var(--brand-green); }
+        .qty-input { width: 40px; text-align: center; border: none; border-left: 1px solid var(--border-color); border-right: 1px solid var(--border-color); font-size: 1rem; font-weight: bold; pointer-events: none; }
+        
+        .add-cart-btn {
+            flex-grow: 1; background: var(--brand-green); color: white; border: none;
+            padding: 0.75rem; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer;
         }
 
-        .empty-cart {
-            text-align: center;
-            color: var(--text-light);
-            padding: 2rem 0;
-            font-style: italic;
+        /* ===== 側邊購物車 ===== */
+        .cart-sidebar {
+            position: fixed; top: 0; right: -400px; width: 100%; max-width: 400px; height: 100vh;
+            background: white; box-shadow: -4px 0 15px rgba(0,0,0,0.1); z-index: 1000;
+            transition: right 0.3s ease; display: flex; flex-direction: column;
         }
-
+        .cart-sidebar.open { right: 0; }
+        .cart-header { padding: 1.5rem; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; font-size: 1.25rem; font-weight: bold; }
+        .cart-items { padding: 1.5rem; flex-grow: 1; overflow-y: auto; }
+        .cart-item { border-bottom: 1px dashed var(--border-color); padding: 1rem 0; display: flex; justify-content: space-between; }
+        .cart-item-info h5 { font-size: 1rem; color: var(--brand-green); }
+        .cart-item-specs { font-size: 0.8rem; color: var(--text-gray); margin-top: 4px; }
+        .del-btn { color: var(--danger); cursor: pointer; border: none; background: none; font-size: 1rem; padding: 0.5rem; }
+        .cart-footer { padding: 1.5rem; border-top: 1px solid var(--border-color); background: var(--bg-gray); }
+        .input-name { width: 100%; padding: 0.75rem; border: 1px solid var(--border-color); border-radius: 6px; margin-bottom: 1rem; font-size: 1rem; }
+        .submit-btn { width: 100%; background: var(--brand-green); color: white; padding: 1rem; border: none; border-radius: 6px; font-size: 1.1rem; font-weight: bold; cursor: pointer; }
+        .submit-btn:disabled { background: #cccccc; cursor: not-allowed; }
+        
+        .overlay-bg {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5);
+            z-index: 999; display: none;
+        }
     </style>
 </head>
 <body>
 
+    <!-- 頂部列 -->
     <header class="header">
-        <h1>🍵 專業手搖飲點單系統</h1>
+        <div class="brand">🐄 專業手搖飲</div>
+        <button class="cart-toggle-btn" onclick="toggleCart()">🛒 購物車 (<span id="cartCount">0</span>)</button>
     </header>
 
-    <div class="container">
-        <!-- 左側：點餐選擇區 -->
-        <main class="order-section">
-            <div class="section-title">01. 顧客資訊</div>
-            <div class="form-group">
-                <input type="text" id="userName" placeholder="請輸入您的姓名或暱稱" required>
+    <!-- 菜單渲染區 -->
+    <main class="menu-container" id="menuContainer"></main>
+
+    <!-- 點餐彈出視窗 -->
+    <div class="modal-overlay" id="productModal">
+        <div class="modal">
+            <div class="modal-header">
+                <span id="m-title">商品名稱</span>
+                <span class="close-btn" onclick="closeModal()">×</span>
             </div>
-
-            <div class="section-title">02. 選擇飲品</div>
-            <div class="form-group">
-                <select id="drinkSelect">
-                    <option value="" disabled selected>-- 請選擇飲品 --</option>
-                    <optgroup label="經典原茶">
-                        <option value="1|極上熟成紅茶|35">極上熟成紅茶 - $35</option>
-                        <option value="2|高山金萱青茶|40">高山金萱青茶 - $40</option>
-                        <option value="3|碳焙鐵觀音|40">碳焙鐵觀音 - $40</option>
-                    </optgroup>
-                    <optgroup label="香醇奶茶">
-                        <option value="4|蜜香珍珠奶茶|55">蜜香珍珠奶茶 - $55</option>
-                        <option value="5|黑糖波霸鮮奶|75">黑糖波霸鮮奶 - $75</option>
-                        <option value="6|宇治抹茶拿鐵|70">宇治抹茶拿鐵 - $70</option>
-                    </optgroup>
-                    <optgroup label="清爽鮮果">
-                        <option value="7|鮮榨葡萄柚綠|65">鮮榨葡萄柚綠 - $65</option>
-                        <option value="8|百香雙響炮|60">百香雙響炮 - $60</option>
-                    </optgroup>
-                </select>
-            </div>
-
-            <div class="options-grid">
-                <div class="form-group">
-                    <label>容量</label>
-                    <select id="sizeSelect">
-                        <option value="中杯(M)">中杯 (M)</option>
-                        <option value="大杯(L)">大杯 (L) +$10</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>甜度</label>
-                    <select id="sugarSelect">
-                        <option value="正常糖">正常糖 (100%)</option>
-                        <option value="少糖">少糖 (70%)</option>
-                        <option value="半糖" selected>半糖 (50%)</option>
-                        <option value="微糖">微糖 (30%)</option>
-                        <option value="無糖">無糖 (0%)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>冰塊</label>
-                    <select id="iceSelect">
-                        <option value="正常冰">正常冰</option>
-                        <option value="少冰">少冰</option>
-                        <option value="微冰" selected>微冰</option>
-                        <option value="去冰">去冰</option>
-                        <option value="常溫">常溫</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>加料</label>
-                    <select id="toppingSelect">
-                        <option value="無">無</option>
-                        <option value="珍珠">珍珠 +$10</option>
-                        <option value="椰果">椰果 +$10</option>
-                        <option value="布丁">布丁 +$15</option>
-                    </select>
-                </div>
-            </div>
-
-            <button class="btn btn-add" onclick="addToCart()">+ 加入購物車</button>
-        </main>
-
-        <!-- 右側：購物車區 -->
-        <aside class="cart-section">
-            <div class="section-title">🛒 您的購物車</div>
             
-            <div id="cartItemsList">
-                <div class="empty-cart">購物車目前是空的喔！</div>
+            <div class="modal-img">🍵</div>
+            
+            <div class="modal-notice">
+                💡 <b>注意事項：</b><br>
+                * 飲品含有天然成分，易懸浮於表面屬正常現象。<br>
+                * 加料配方(如珍珠/粉粿) 搭配冷飲口感較佳。
             </div>
 
-            <div class="cart-total">
-                總計: $<span id="totalPrice">0</span>
+            <div class="modal-body">
+                <div class="option-group">
+                    <div class="option-title">容量</div>
+                    <div class="btn-grid" id="m-size">
+                        <!-- 動態生成按鈕 -->
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <div class="option-title">溫度</div>
+                    <div class="btn-grid" id="m-ice">
+                        <button class="opt-btn" onclick="selectOpt(this, 'ice', '正常冰')">正常冰</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'ice', '少冰')">少冰</button>
+                        <button class="opt-btn active" onclick="selectOpt(this, 'ice', '微冰')">微冰</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'ice', '去冰')">去冰</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'ice', '常溫')">常溫</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'ice', '熱')">熱</button>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <div class="option-title">甜度</div>
+                    <div class="btn-grid" id="m-sugar">
+                        <button class="opt-btn" onclick="selectOpt(this, 'sugar', '正常糖')">正常糖</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'sugar', '少糖')">少糖</button>
+                        <button class="opt-btn active" onclick="selectOpt(this, 'sugar', '半糖')">半糖</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'sugar', '微糖')">微糖</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'sugar', '一分糖')">一分糖</button>
+                        <button class="opt-btn" onclick="selectOpt(this, 'sugar', '無糖')">無糖</button>
+                    </div>
+                </div>
+
+                <div class="option-group">
+                    <div class="option-title">加料 (單選)</div>
+                    <select id="m-topping" class="full-width" onchange="calcPrice()">
+                        <option value="無|0">不加料</option>
+                        <option value="珍珠|10">白玉珍珠 (+$10)</option>
+                        <option value="椰果|10">椰果 (+$10)</option>
+                        <option value="布丁|15">手作布丁 (+$15)</option>
+                    </select>
+                </div>
             </div>
 
-            <button class="btn btn-checkout" id="checkoutBtn" onclick="submitOrder()" disabled>確認送出訂單</button>
-        </aside>
+            <div class="modal-footer">
+                <div class="qty-selector">
+                    <button class="qty-btn" onclick="changeQty(-1)">-</button>
+                    <input type="text" id="m-qty" class="qty-input" value="1" readonly>
+                    <button class="qty-btn" onclick="changeQty(1)">+</button>
+                </div>
+                <button class="add-cart-btn" onclick="addToCart()">
+                    加入購物車 $<span id="m-total">0</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 側邊購物車 -->
+    <div class="overlay-bg" id="cartOverlay" onclick="toggleCart()"></div>
+    <div class="cart-sidebar" id="cartSidebar">
+        <div class="cart-header">
+            <span>🛍️ 購物車明細</span>
+            <span style="cursor:pointer;" onclick="toggleCart()">×</span>
+        </div>
+        <div class="cart-items" id="cartList">
+            <!-- 購物車內容 -->
+        </div>
+        <div class="cart-footer">
+            <input type="text" id="userName" class="input-name" placeholder="👤 訂購人姓名 (必填)">
+            <div style="display:flex; justify-content:space-between; margin-bottom:1rem; font-size:1.2rem; font-weight:bold;">
+                <span>總金額：</span>
+                <span style="color:var(--brand-green)">$<span id="cartTotal">0</span></span>
+            </div>
+            <button class="submit-btn" id="submitBtn" onclick="submitOrder()">✅ 登入後訂購 (送出訂單)</button>
+        </div>
     </div>
 
     <script>
-        // 🚀 取得網址列上的 LINE UID (從 LINE Bot 給的專屬連結中擷取)
+        // --- 1. 系統變數與菜單資料 ---
         const urlParams = new URLSearchParams(window.location.search);
         const userLineUid = urlParams.get('uid');
-
-        // 購物車狀態管理 (State Management)
         let cart = [];
+        
+        // 當前正在操作的商品狀態
+        let currentItem = { id: 0, name: '', basePrice: 0, size: 'L', sugar: '半糖', ice: '微冰', topping: '無', toppingPrice: 0, qty: 1 };
 
-        // 1. 加入購物車邏輯
-        function addToCart() {
-            const drinkSelect = document.getElementById('drinkSelect').value;
-            if (!drinkSelect) {
-                alert('請先選擇一杯飲品！');
-                return;
+        const menuData = [
+            {
+                category: "醇萃茶",
+                items: [
+                    { id: 1, name: "英倫伯爵紅茶", price: 40 },
+                    { id: 2, name: "大正醇香紅茶", price: 40 },
+                    { id: 3, name: "原片初露青茶", price: 40 }
+                ]
+            },
+            {
+                category: "鮮調果茶",
+                items: [
+                    { id: 4, name: "柳丁綠茶", price: 70 },
+                    { id: 5, name: "冬瓜青茶", price: 55 },
+                    { id: 6, name: "白甘蔗青茶", price: 75 }
+                ]
+            },
+            {
+                category: "醇濃鮮奶茶",
+                items: [
+                    { id: 7, name: "伯爵紅茶拿鐵", price: 55 },
+                    { id: 8, name: "大正紅茶拿鐵", price: 55 }
+                ]
             }
+        ];
 
-            const [id, name, basePriceStr] = drinkSelect.split('|');
-            let basePrice = parseInt(basePriceStr);
+        // --- 2. 初始化畫面 ---
+        function renderMenu() {
+            const container = document.getElementById('menuContainer');
+            menuData.forEach(cat => {
+                let html = `<div class="category-group"><div class="category-title">${cat.category}</div><div class="items-grid">`;
+                cat.items.forEach(item => {
+                    html += `
+                        <div class="menu-item" onclick="openModal(${item.id}, '${item.name}', ${item.price})">
+                            <div class="item-info">
+                                <h4>${item.name}</h4>
+                            </div>
+                            <div class="item-price">$${item.price}</div>
+                        </div>`;
+                });
+                html += `</div></div>`;
+                container.innerHTML += html;
+            });
+        }
+        renderMenu();
 
-            const size = document.getElementById('sizeSelect').value;
-            const sugar = document.getElementById('sugarSelect').value;
-            const ice = document.getElementById('iceSelect').value;
-            const topping = document.getElementById('toppingSelect').value;
-
-            let subtotal = basePrice;
-            if (size.includes('L')) subtotal += 10;
-            if (topping === '珍珠' || topping === '椰果') subtotal += 10;
-            if (topping === '布丁') subtotal += 15;
-
-            const item = {
-                cart_id: Date.now(), 
-                product_id: parseInt(id),
-                product_name: name,
-                size: size,
-                sugar: sugar,
-                ice: ice,
-                toppings: topping,
-                subtotal: subtotal
-            };
-
-            cart.push(item);
-            updateCartUI();
+        // --- 3. Modal 互動邏輯 ---
+        function openModal(id, name, price) {
+            currentItem = { id, name, basePrice: price, size: 'L', sugar: '半糖', ice: '微冰', topping: '無', toppingPrice: 0, qty: 1 };
             
-            document.getElementById('drinkSelect').value = '';
+            document.getElementById('m-title').textContent = name;
+            document.getElementById('m-qty').value = 1;
+            document.getElementById('m-topping').value = "無|0";
+            
+            // 渲染尺寸按鈕 (預設L)
+            document.getElementById('m-size').innerHTML = `<button class="opt-btn active" onclick="selectOpt(this, 'size', 'L')">大杯 (L)</button>`;
+            
+            // 重置按鈕狀態
+            resetActiveButtons('m-ice', '微冰');
+            resetActiveButtons('m-sugar', '半糖');
+            
+            calcPrice();
+            document.getElementById('productModal').style.display = 'flex';
         }
 
-        // 2. 刪除購物車品項
+        function closeModal() {
+            document.getElementById('productModal').style.display = 'none';
+        }
+
+        function selectOpt(element, type, value) {
+            // 切換 active 樣式
+            const siblings = element.parentElement.children;
+            for(let btn of siblings) btn.classList.remove('active');
+            element.classList.add('active');
+            
+            // 更新狀態
+            currentItem[type] = value;
+        }
+
+        function changeQty(delta) {
+            let newQty = currentItem.qty + delta;
+            if (newQty >= 1 && newQty <= 20) {
+                currentItem.qty = newQty;
+                document.getElementById('m-qty').value = newQty;
+                calcPrice();
+            }
+        }
+
+        function calcPrice() {
+            // 處理加料
+            const topVal = document.getElementById('m-topping').value.split('|');
+            currentItem.topping = topVal[0];
+            currentItem.toppingPrice = parseInt(topVal[1]);
+            
+            // 單杯價格 = 基礎價 + 加料價
+            const unitPrice = currentItem.basePrice + currentItem.toppingPrice;
+            const total = unitPrice * currentItem.qty;
+            document.getElementById('m-total').textContent = total;
+        }
+
+        // --- 4. 購物車邏輯 ---
+        function addToCart() {
+            const unitPrice = currentItem.basePrice + currentItem.toppingPrice;
+            
+            // 因為支援數量，我們把它拆成多筆獨立訂單塞入陣列 (配合後端 Pydantic 邏輯)
+            for (let i = 0; i < currentItem.qty; i++) {
+                cart.push({
+                    cart_id: Date.now() + i, 
+                    product_id: currentItem.id,
+                    product_name: currentItem.name,
+                    size: currentItem.size === 'L' ? '大杯(L)' : '中杯(M)',
+                    sugar: currentItem.sugar,
+                    ice: currentItem.ice,
+                    toppings: currentItem.topping,
+                    subtotal: unitPrice
+                });
+            }
+            updateCartUI();
+            closeModal();
+            
+            // 自動打開側邊欄看結果
+            if(!document.getElementById('cartSidebar').classList.contains('open')) toggleCart();
+        }
+
         function removeFromCart(cartId) {
             cart = cart.filter(item => item.cart_id !== cartId);
             updateCartUI();
         }
 
-        // 3. 更新購物車畫面
         function updateCartUI() {
-            const cartList = document.getElementById('cartItemsList');
-            const totalPriceEl = document.getElementById('totalPrice');
-            const checkoutBtn = document.getElementById('checkoutBtn');
-            
-            cartList.innerHTML = '';
+            document.getElementById('cartCount').textContent = cart.length;
+            const list = document.getElementById('cartList');
             let total = 0;
-
+            
             if (cart.length === 0) {
-                cartList.innerHTML = '<div class="empty-cart">購物車目前是空的喔！</div>';
-                checkoutBtn.disabled = true;
+                list.innerHTML = '<div style="text-align:center; color:#999; margin-top:2rem;">購物車是空的喔！</div>';
+                document.getElementById('submitBtn').disabled = true;
             } else {
-                checkoutBtn.disabled = false;
+                document.getElementById('submitBtn').disabled = false;
+                list.innerHTML = '';
                 cart.forEach(item => {
                     total += item.subtotal;
-                    const itemHTML = `
+                    list.innerHTML += `
                         <div class="cart-item">
-                            <div class="cart-item-details">
-                                <div class="cart-item-title">${item.product_name}</div>
-                                <div class="cart-item-specs">
-                                    ${item.size} | ${item.sugar} | ${item.ice} 
-                                    ${item.toppings !== '無' ? `| +${item.toppings}` : ''}
-                                </div>
+                            <div class="cart-item-info">
+                                <h5>${item.product_name}</h5>
+                                <div class="cart-item-specs">${item.size} | ${item.ice} | ${item.sugar} ${item.toppings!=='無'?`| +${item.toppings}`:''}</div>
                             </div>
-                            <div class="cart-item-price">$${item.subtotal}</div>
-                            <button class="btn-remove" onclick="removeFromCart(${item.cart_id})">✕</button>
+                            <div style="display:flex; align-items:center;">
+                                <span style="font-weight:bold; margin-right:10px;">$${item.subtotal}</span>
+                                <button class="del-btn" onclick="removeFromCart(${item.cart_id})">🗑️</button>
+                            </div>
                         </div>
                     `;
-                    cartList.innerHTML += itemHTML;
                 });
             }
-            totalPriceEl.textContent = total;
+            document.getElementById('cartTotal').textContent = total;
         }
 
-        // 4. 送出訂單至後端 API
+        function toggleCart() {
+            const sidebar = document.getElementById('cartSidebar');
+            const overlay = document.getElementById('cartOverlay');
+            if (sidebar.classList.contains('open')) {
+                sidebar.classList.remove('open');
+                overlay.style.display = 'none';
+            } else {
+                sidebar.classList.add('open');
+                overlay.style.display = 'block';
+            }
+        }
+
+        function resetActiveButtons(containerId, defaultValue) {
+            const btns = document.getElementById(containerId).children;
+            for(let btn of btns) {
+                if(btn.textContent === defaultValue) btn.classList.add('active');
+                else btn.classList.remove('active');
+            }
+        }
+
+        // --- 5. 送出訂單至後端 ---
         async function submitOrder() {
             const userName = document.getElementById('userName').value.trim();
-            
-            if (!userName) {
-                alert('結帳前請記得輸入您的姓名或暱稱喔！');
-                document.getElementById('userName').focus();
-                return;
-            }
+            if (!userName) { alert('結帳前請記得輸入訂購人姓名喔！'); document.getElementById('userName').focus(); return; }
 
-            const checkoutBtn = document.getElementById('checkoutBtn');
-            checkoutBtn.disabled = true;
-            checkoutBtn.textContent = '訂單傳送中...';
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true; btn.textContent = '訂單傳送中...';
 
-            const totalAmount = parseInt(document.getElementById('totalPrice').textContent);
+            const totalAmount = parseInt(document.getElementById('cartTotal').textContent);
 
-            // 🚀 嚴格對應 Python 後端模型，並加入 line_uid
             const orderPayload = {
                 user_id: userName,
-                line_uid: userLineUid, // 這裡將網址抓到的 ID 綁進訂單
+                line_uid: userLineUid,
                 total_price: totalAmount,
                 items: cart.map(item => ({
                     product_id: item.product_id,
@@ -422,28 +471,24 @@
             try {
                 const response = await fetch('/api/orders', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(orderPayload)
                 });
 
                 if (response.ok) {
                     const result = await response.json();
-                    alert(`🎉 訂單送出成功！您的訂單編號為：#${result.order_id}\n請稍候片刻，我們將盡快為您製作！`);
-                    cart = [];
-                    updateCartUI();
+                    alert(`🎉 訂單送出成功！編號：#${result.order_id}`);
+                    cart = []; updateCartUI(); toggleCart();
                     document.getElementById('userName').value = '';
-                    checkoutBtn.textContent = '確認送出訂單';
                 } else {
-                    const errData = await response.json();
-                    throw new Error(errData.detail || '伺服器回傳錯誤狀態');
+                    const err = await response.json();
+                    throw new Error(err.detail || '系統錯誤');
                 }
             } catch (error) {
-                alert('❌ 發生錯誤，請確認輸入內容是否符合格式（例如姓名不能有特殊符號），或稍後再試。');
-                console.error('Error:', error);
-                checkoutBtn.disabled = false;
-                checkoutBtn.textContent = '確認送出訂單';
+                alert('❌ 發生錯誤，請確認輸入內容或稍後再試。');
+            } finally {
+                btn.textContent = '✅ 登入後訂購 (送出訂單)';
+                if(cart.length > 0) btn.disabled = false;
             }
         }
     </script>
