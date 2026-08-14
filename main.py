@@ -92,7 +92,7 @@ def read_root():
 
 @app.get("/client")
 def get_client_page():
-    return FileResponse("index.html")
+    return FileResponse("index11.html")
 
 @app.get("/admin")
 def get_admin_page():
